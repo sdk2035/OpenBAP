@@ -1,161 +1,160 @@
-
 # OpenBAP & The Enterprise GraalVM Engine
 
-> **Next-generation, AI-native business semantics and low-code UI on the JVM.**  
-> Decouple legacy enterprise logic, execute embedded ABAP natively, and auto-generate modern web interfaces using OpenXava and AI.
+> **Next-generation, AI-native business semantics and low-code UI on the JVM.**
+> Decouple legacy enterprise logic, reconstruct business semantics, execute embedded ABAP through GraalVM/Truffle, and generate modern enterprise interfaces with OpenXava and AI.
 
 ---
 
-## 📋 Executive Overview
+## Table of Contents
 
-**OpenBAP** is an open-source, polyglot business engine built on top of **GraalVM** and **Truffle**. It bridges legacy ERP systems (SAP ABAP) and modern, cloud-native architectures without relying on proprietary C-Kernel application servers or expensive low-code licenses (like GeneXus).
+- [Executive Overview](#executive-overview)
+- [Architecture Goals](#architecture-goals)
+- [Core Architectural Pillars](#core-architectural-pillars)
+- [Reference Migration Flow](#reference-migration-flow)
+- [System Architecture](#system-architecture)
+- [Engineering Documentation](#engineering-documentation)
+- [Stack Comparison](#stack-comparison)
+- [Getting Started](#getting-started)
+- [License](#license)
 
-By combining **Apache OFBiz** as the open-source Data Dictionary (DDIC), **OpenXava** as the AI-augmented Low-Code UI layer, and **GraalVM** as the execution core, OpenBAP delivers an end-to-end open-source alternative for enterprise digital transformation.
+## Executive Overview
 
----
+**OpenBAP** is an open-source, polyglot business application platform built around **GraalVM**, **Truffle**, **Apache OFBiz**, and **OpenXava**. Its purpose is not to reproduce SAP's proprietary C-Kernel. Instead, OpenBAP reconstructs the reusable business model around open components:
 
-## 🚀 Key Architectural Pillars
+- **Apache OFBiz Entity Engine** acts as the semantic enterprise data backbone and open DDIC-equivalent.
+- **GraalVM/Truffle** provides the execution substrate for OpenBAP rules and legacy-language interoperability.
+- **AI-assisted reverse engineering** reconstructs domain models, business rules, transactions, and UI intent from legacy metadata and source artifacts.
+- **OpenXava** exposes reconstructed domain models as modern low-code web applications.
+- **Validation pipelines** compare reconstructed behavior with source-system expectations before deployment.
 
-### 1. AI-Powered Low-Code UI (OpenXava Integration)
-Instead of building complex web forms or relying on proprietary code generators, OpenBAP uses an AI agent to inspect domain models and generate **OpenXava** JPA annotations and controllers automatically:
+The result is an architecture for progressive modernization: legacy ERP semantics can be extracted, mapped, reconstructed, validated, and migrated incrementally rather than requiring a proprietary application server clone.
 
-* **Instant Web & Mobile UI:** Converts OpenBAP business entities directly into responsive, enterprise-grade web interfaces.
-* **AI-Assisted Layouts:** AI agents optimize view layouts, field validations, and dynamic UI actions from natural language specifications.
+## Architecture Goals
 
-### 2. AI-Native & Natural Business Semantics
-OpenBAP elevates code expressiveness to intent-driven business logic. Developers write business rules using structured, natural-language constructs compiling directly into optimized GraalVM Abstract Syntax Trees (ASTs):
+1. Preserve business semantics while reducing dependency on proprietary runtime infrastructure.
+2. Separate data-model migration from executable business-rule reconstruction.
+3. Use AI as an engineering accelerator while retaining deterministic validation gates.
+4. Keep reconstructed rules portable through GraalVM/Truffle ASTs and JVM interoperability.
+5. Produce modern OpenXava applications from a reusable semantic model.
+6. Support coexistence with legacy systems during staged migration.
 
-```openbap
-// AI-Intent syntax compiling directly to GraalVM JIT
-rule "Apply Regional Discount":
-    given Table<Customer> as customers where country is "PE"
-    for each customer with total_orders > 10:
-        apply discount of 15% to open_invoices
-````
+## Core Architectural Pillars
 
-### 3\. Embedded Legacy ABAP (Polyglot Interop)
+### 1. Semantic Data Backbone — Apache OFBiz
 
-Just as **GraalPy** seamlessly interoperates with Python/Jython or **TruffleRuby** with C extensions, OpenBAP includes a legacy execution engine (`TruffleABAP`). You can embed raw, legacy ABAP code directly alongside modern Java, OpenXava entities, or Python scripts.
+OpenBAP maps legacy ERP entities, domains, relationships, and transaction semantics into the **Apache OFBiz Entity Engine**. SAP objects such as `MARA`, `BSEG`, and `KNA1` can be associated with canonical OFBiz concepts such as `Product`, `AcctgTrans`, and `Party`, while preserving traceability to the source model.
 
-Fragmento de código
+### 2. AI-Assisted Reverse Engineering
 
-```
-import java.time.LocalDate
+AI agents analyze exported metadata, UML models, ABAP sources, transaction definitions, validation rules, and UI descriptors. Their output is treated as a proposed semantic reconstruction rather than an unquestioned translation. Every generated artifact remains traceable to its legacy source and is subject to automated and human validation.
 
+### 3. GraalVM / Truffle Execution
+
+Reconstructed business rules are compiled into a compact OpenBAP representation and lowered to **Truffle AST nodes**. Partial evaluation and GraalVM JIT compilation provide an execution path for modernized rules while preserving polyglot interoperability with Java and other GraalVM languages.
+
+### 4. Embedded Legacy ABAP
+
+Where immediate replacement is not practical, OpenBAP can preserve selected ABAP logic through a `TruffleABAP` compatibility layer. This allows staged modernization instead of requiring a big-bang rewrite.
+
+```text
 fn process_legacy_ledger():
-    let today = LocalDate.now()
-    
-    // Inline Legacy ABAP execution via TruffleABAP engine
     #abap {
       DATA: lt_mara TYPE TABLE OF mara.
       SELECT * FROM mara INTO TABLE @lt_mara WHERE matnr = '1000'.
-      LOOP AT lt_mara INTO DATA(ls_mara).
-        WRITE: / ls_mara-matnr.
-      ENDLOOP.
     }
 ```
 
-### 4\. Apache OFBiz as the Enterprise DDIC Backbone
+### 5. AI-Augmented Low-Code UI — OpenXava
 
-OpenBAP maps legacy SAP entities (e.g., `MARA`, `BSEG`, `KNA1`) directly to the **Apache OFBiz Entity Engine** (`Product`, `AcctgTrans`, `Party`), eliminating the need for a proprietary database dictionary.
+OpenXava consumes reconstructed domain models and JPA mappings. AI-assisted generators can propose annotations, list/detail views, validation messages, navigation flows, and role-oriented layouts, while application behavior remains driven by the validated semantic model.
 
-## 🏗 Full-Stack System Architecture
+## Reference Migration Flow
 
-```
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│              Presentation Layer: OpenXava + AI-Generated UI                      │
-│             (Generated Web Forms, Dashboards & Mobile Views)                    │
-└────────────────────────────────────────┬────────────────────────────────────────┘
-                                         │
-                                         ▼
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│ OpenBAP Truffle Runtime (GraalVM)                                               │
-│                                                                                 │
-│  ┌───────────────────────────────────┐     ┌─────────────────────────────────┐  │
-│  │ Natural Business Syntax / AI-Rule │     │ Embedded Legacy ABAP Engine     │  │
-│  └─────────────────┬─────────────────┘     └────────────────┬────────────────┘  │
-│                    │                                        │                   │
-│                    └───────────────────┬────────────────────┘                   │
-│                                        │                                        │
-│                                        ▼                                        │
-│                       ┌─────────────────────────────────┐                       │
-│                       │  AST Partial Evaluation & JIT   │                       │
-│                       └────────────────┬────────────────┘                       │
-└────────────────────────────────────────┼────────────────────────────────────────┘
-                                         │
-                        ┌────────────────┴────────────────┐
-                        │                                 │
-                        ▼                                 ▼
-        ┌───────────────────────────────┐ ┌───────────────────────────────┐
-        │  Apache OFBiz Entity Engine   │ │  Native JDBC / R2DBC Drivers  │
-        │  (Data Dictionary & Core ERP) │ │  (PostgreSQL, Oracle, S4HANA) │
-        └───────────────────────────────┘ └───────────────────────────────┘
+```mermaid
+flowchart LR
+    A[SAP Metadata / UML / ABAP / Transactions] --> B[Extraction & Normalization]
+    B --> C[Canonical Semantic Model]
+    C --> D[OFBiz Entity Mapping]
+    C --> E[AI-Assisted Rule Reconstruction]
+    E --> F[OpenBAP IR]
+    F --> G[Truffle AST / GraalVM Runtime]
+    D --> H[OpenXava Domain Model]
+    G --> I[Behavioral Validation]
+    H --> I
+    I --> J[Generated UI & Services]
+    J --> K[Incremental Deployment]
 ```
 
-## ⚡ Stack Comparison
+## System Architecture
 
-**Capability**
+```text
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                     OpenXava Presentation Layer                              │
+│          AI-assisted views, actions, dashboards and workflows               │
+└───────────────────────────────────┬──────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                     OpenBAP Semantic Application Layer                       │
+│  Canonical model │ rule IR │ validations │ traceability │ migration maps    │
+└──────────────────────────────┬──────────────────────────────┬────────────────┘
+                               │                              │
+                               ▼                              ▼
+┌─────────────────────────────────────────┐   ┌───────────────────────────────┐
+│ GraalVM / Truffle Runtime               │   │ Apache OFBiz Entity Engine    │
+│ OpenBAP rules + optional TruffleABAP    │   │ Semantic DDIC / ERP entities  │
+└──────────────────────┬──────────────────┘   └───────────────┬───────────────┘
+                       │                                      │
+                       └──────────────────┬───────────────────┘
+                                          ▼
+                           ┌────────────────────────────┐
+                           │ Databases / APIs / Legacy │
+                           │ coexistence integrations   │
+                           └────────────────────────────┘
+```
 
-**Legacy Enterprise (SAP / GeneXus)**
+## Engineering Documentation
 
-**OpenBAP + OpenXava + GraalVM**
+The repository now separates the product overview from the detailed engineering flow:
 
-**UI / Low-Code Layer**
+- [`docs/architecture/openbap-reference-architecture.md`](docs/architecture/openbap-reference-architecture.md) — components, semantic layers, traceability, runtime boundaries, validation, and deployment model.
+- [`docs/workflows/sap-migration.md`](docs/workflows/sap-migration.md) — end-to-end legacy ERP extraction and migration workflow.
+- [`docs/workflows/data-model-mapping.md`](docs/workflows/data-model-mapping.md) — SAP-to-OFBiz semantic mapping and reconciliation.
+- [`docs/workflows/business-rule-reconstruction.md`](docs/workflows/business-rule-reconstruction.md) — AI-assisted rule recovery, OpenBAP IR, and Truffle lowering.
+- [`docs/workflows/ui-reconstruction.md`](docs/workflows/ui-reconstruction.md) — UI intent extraction and OpenXava generation.
+- [`docs/workflows/testing-and-deployment.md`](docs/workflows/testing-and-deployment.md) — differential testing, verification gates, rollout, and coexistence.
 
-Proprietary SAP GUI / Fiori / GeneXus
+## Stack Comparison
 
-**OpenXava** (AI-Augmented, Open Source JPA UI)
+| Capability | Legacy Enterprise Stack | OpenBAP Target Architecture |
+|---|---|---|
+| UI / low-code layer | SAP GUI / Fiori / proprietary generators | OpenXava + AI-assisted generation |
+| Runtime kernel | Proprietary ABAP application server | GraalVM / Truffle |
+| Data dictionary | Proprietary DDIC | Apache OFBiz Entity Engine + canonical semantic model |
+| Business logic | Legacy procedural code | OpenBAP rules + selective embedded ABAP |
+| Reverse engineering | Manual analysis / vendor-specific tooling | AI-assisted extraction with traceability and validation |
+| Interoperability | Vendor APIs and adapters | JVM + GraalVM polyglot + open APIs |
+| Migration model | Replacement or vendor upgrade | Incremental reconstruction and coexistence |
 
-**Runtime Kernel**
-
-Proprietary C/C++ ABAP Engine
-
-**GraalVM / Truffle** (Native Executable)
-
-**Data Dictionary**
-
-Proprietary SAP DDIC
-
-**Apache OFBiz Entity Engine**
-
-**Business Logic**
-
-Verbose 80s Procedural ABAP
-
-**AI-Native Natural Rules + Embedded ABAP**
-
-**Interoperability**
-
-Restricted (RFC, SAP JCo)
-
-**Native Polyglot** (Java, Python, JS, R)
-
-**Licensing**
-
-High Per-Seat / Server Vendor Lock-In
-
-**Open Source** (Apache 2.0 / LGPL)
-
-## 🛠 Getting Started
+## Getting Started
 
 ### Prerequisites
 
--   **GraalVM JDK 21+** with Truffle framework enabled.
-    
--   **Apache OFBiz 18.12+** (configured as entity provider).
-    
--   **OpenXava 7.0+** (for auto-generating JPA views).
-    
+- **GraalVM JDK 21+** with Truffle framework support.
+- **Apache OFBiz 18.12+** configured as the entity provider.
+- **OpenXava 7+** for generated enterprise UI.
+- A source-artifact export pipeline for metadata, models, code, and transaction definitions.
 
-### Running OpenBAP Polyglot Script
+### Conceptual Execution
 
-Bash
-
+```bash
+# Example target CLI; implementation status may vary by module.
+openbap --model model/openbap-domain.yaml \
+        --rules rules/ \
+        --ui openxava \
+        --ofbiz-config config/ofbiz-containers.xml
 ```
-# Execute OpenBAP with embedded legacy ABAP and OpenXava binding
-graalvm/bin/openbap --polyglot --ui=openxava --ofbiz.config=ofbiz-containers.xml main.bap
-```
 
-## 📄 License
+## License
 
-This project is licensed under the Apache 2.0 License. OpenBAP is an independent open-source project and is not affiliated with or endorsed by SAP SE or Artech/GeneXus.
+This project is licensed under the Apache 2.0 License. OpenBAP is an independent open-source project and is not affiliated with or endorsed by SAP SE, OpenXava, Apache OFBiz, Oracle, or Artech/GeneXus.
