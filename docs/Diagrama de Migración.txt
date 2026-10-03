@@ -1,0 +1,143 @@
+1. Diagrama de Migración por Ingeniería Inversa con Rascal MPL para OpenBAP
+El repositorio OpenBAP (Business Application Platform) contiene definiciones léxicas, formularios y flujos legacy. Para migrarlo a la arquitectura reactiva Low-Code, se define un pipeline de ingeniería inversa estructurado en Rascal MPL:
+
+ [ Proyecto Legacy OpenBAP ] 
+ (Formularios / Flujos XML/Java)
+            │
+            ▼
+ ┌─────────────────────────────────────────────────────────┐
+ │ 1. Extracción M3 & AST con Rascal MPL                    │
+ │    (Mapeo de esquemas, entidades y reglas de negocio)  │
+ └──────────────────────────┬──────────────────────────────┘
+                            │
+                            ▼
+ ┌─────────────────────────────────────────────────────────┐
+ │ 2. Inferencia & Enriquecimiento Semántico (IA)           │
+ │    (Definición de Meta-Modelos JSON/XMI)                │
+ └──────────────────────────┬──────────────────────────────┘
+                            │
+                            ▼
+ ┌─────────────────────────────────────────────────────────┐
+ │ 3. Generación AOT para UI Factory (GraalVM / Truffle)    │
+ │    (Adaptadores BonitaBPM + OpenUI5 UI Controls)        │
+ └─────────────────────────────────────────────────────────┘
+Diagrama de Secuencia de Migración (PlantUML)
+Fragmento de código
+@startuml
+actor "Dev/Architect" as Dev
+participant "Rascal MPL Engine" as Rascal
+participant "AI Semantic Enhancer" as AI
+participant "OpenUI5 Custom Control" as UI5
+participant "BonitaBPM Engine" as Bonita
+
+Dev -> Rascal : Carga fuentes de OpenBAP (Java/XML)
+Rascal -> Rascal : Genera Modelo M3 & AST Graphs
+Rascal -> AI : Exporta metadatos a XMI
+AI -> AI : Mapea reglas a JSON Schema Low-Code
+AI -> UI5 : Genera Vistas SAP OpenUI5 (Dynamic XMLViews)
+AI -> Bonita : Inyecta REST Connector / Widget Extension
+Bonita <-> UI5 : Ejecución reactiva de procesos de negocio
+@startuml
+2. Plugin para BonitaBPM (Custom Widget / Integration Connector)
+Este componente intercepta las tareas humanas de BonitaBPM e inyecta la UI Factory cargando dinámicamente las vistas generadas.
+
+BonitaOpenBAPWidget.json (Definición del Widget Bonita UI Designer)
+JSON
+{
+  "id": "customOpenBapUIFactory",
+  "name": "OpenBAP Dynamic UI Factory",
+  "version": "1.0.0",
+  "designerVersion": "1.14.0",
+  "widgetType": "component",
+  "properties": [
+    {
+      "name": "metadataSchema",
+      "label": "JSON Layout Definition",
+      "type": "text",
+      "defaultValue": "{}",
+      "bond": "expression"
+    },
+    {
+      "name": "processContract",
+      "label": "Bonita Process Contract",
+      "type": "text",
+      "defaultValue": "{}",
+      "bond": "variable"
+    }
+  ],
+  "controller": "function WidgetcustomOpenBapUIFactoryController($scope, $element) { $scope.initUI5Factory = function() { if (window.sap && window.sap.ui) { window.sap.ui.getCore().getEventBus().publish('OpenBAP', 'RenderSchema', { schema: $scope.properties.metadataSchema, contract: $scope.properties.processContract }); } }; $scope.$watch('properties.metadataSchema', function(newVal) { if (newVal) $scope.initUI5Factory(); }); }"
+}
+3. Plugin / Control Personalizado para OpenUI5
+El control personalizado en OpenUI5 (openbap.ui.UIFactory) recibe la especificación JSON resultante de Rascal y renderiza controles enterprise de SAP/OpenUI5 en tiempo de ejecución.
+
+openbap/ui/UIFactory.js
+JavaScript
+sap.ui.define([
+    "sap/ui/core/Control",
+    "sap/m/VBox",
+    "sap/m/Input",
+    "sap/m/Label",
+    "sap/m/Button"
+], function (Control, VBox, Input, Label, Button) {
+    "use strict";
+
+    return Control.extend("openbap.ui.UIFactory", {
+        metadata: {
+            properties: {
+                schemaJson: { type: "object", defaultValue: null }
+            },
+            aggregations: {
+                _layout: { type: "sap.ui.core.Control", multiple: false, visibility: "hidden" }
+            },
+            events: {
+                submitProcess: { parameters: { payload: { type: "object" } } }
+            }
+        },
+
+        init: function () {
+            this.setAggregation("_layout", new VBox({ spacing: 2 }));
+        },
+
+        setSchemaJson: function (oSchema) {
+            this.setProperty("schemaJson", oSchema, true);
+            this._buildDynamicUI(oSchema);
+        },
+
+        _buildDynamicUI: function (oSchema) {
+            var oContainer = this.getAggregation("_layout");
+            oContainer.removeAllItems();
+
+            if (!oSchema || !oSchema.fields) return;
+
+            var oFormData = {};
+
+            oSchema.fields.forEach(function (field) {
+                oContainer.addItem(new Label({ text: field.label, required: field.required }));
+                
+                var oInput = new Input({
+                    placeholder: field.placeholder || "",
+                    change: function (oEvent) {
+                        oFormData[field.name] = oEvent.getParameter("value");
+                    }
+                });
+                oContainer.addItem(oInput);
+            });
+
+            oContainer.addItem(new Button({
+                text: oSchema.submitText || "Enviar a BonitaBPM",
+                type: "Emphasized",
+                press: function () {
+                    this.fireSubmitProcess({ payload: oFormData });
+                }.bind(this)
+            }));
+        },
+
+        renderer: function (oRm, oControl) {
+            oRm.openStart("div", oControl);
+            oRm.openEnd();
+            oRm.renderControl(oControl.getAggregation("_layout"));
+            oRm.close("div");
+        }
+    });
+});
+
